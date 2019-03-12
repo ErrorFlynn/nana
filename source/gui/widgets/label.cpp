@@ -130,7 +130,7 @@ namespace nana
 						if (!_m_foreach_visual_line(graph, rs))
 							break;
 
-						rs.pos.y += static_cast<int>(rs.vslines.back().extent_height_px);
+						//Now the y-position of rs has been modified to next line.
 					}
 
 					if (transient_.current_font != pre_font)
@@ -303,7 +303,7 @@ namespace nana
 							extent_size.width = width_px;
 
 						for (auto & vsline : rs.vslines)
-							extent_size.height += vsline.extent_height_px;
+							extent_size.height += static_cast<size::value_type>(vsline.extent_height_px);
 
 						content_lines.emplace_back(std::move(rs.vslines));
 
@@ -311,7 +311,8 @@ namespace nana
 							break;
 					}
 
-					if (allowed_width_px < extent_size.width)
+					//The width is not restricted if the allowed_width_px is zero.
+					if (allowed_width_px && (allowed_width_px < extent_size.width))
 						extent_size.width = allowed_width_px;
 
 					if (transient_.current_font != pre_font)
@@ -337,11 +338,11 @@ namespace nana
 #else
 						rs.vslines.emplace_back();
 						auto & vsline = rs.vslines.back();
-
+#endif
 						vsline.baseline = 0;
 						vsline.extent_height_px = def_line_px;
 						vsline.x_base = 0;
-#endif
+
 						return 0;
 					}
 
@@ -445,6 +446,10 @@ namespace nana
 								unsigned sub_text_px = 0;
 								auto sub_text_len = _m_fit_text(graph, data->text().substr(text_begin), rs.allowed_width, sub_text_px);
 
+								//At least one character must be displayed no matter whether the width is enough or not.
+								if (0 == sub_text_len)
+									sub_text_len = 1;
+
 								if (text_begin + sub_text_len < data->text().size())
 								{
 									//make a new visual line
@@ -526,10 +531,6 @@ namespace nana
 
 				bool _m_foreach_visual_line(graph_reference graph, render_status& rs)
 				{
-					std::wstring text;
-					
-					content_element_iterator block_start;
-
 					auto const bottom = static_cast<int>(graph.height()) - 1;
 
 					for (auto & vsline : rs.vslines)
@@ -886,7 +887,8 @@ namespace nana
 			if(graph_ptr->empty())
 			{
 				graph_ptr = &substitute;
-				graph_ptr->make({ 10, 10 });
+				substitute.make({ 10, 10 });
+				substitute.typeface(this->typeface());
 			}
 
 			return impl->renderer.measure(*graph_ptr, limited, impl->text_align, impl->text_align_v);
